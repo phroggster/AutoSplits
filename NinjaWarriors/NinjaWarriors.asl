@@ -1,20 +1,12 @@
 /*
  * phroggie's attempt at a SNES Ninja Warriors (1994) autosplit script for LiveSplit.
  *
- * Copyright (c) 2021  Leland P. Roach
+ * Copyright (c) 2021  Lee Roach
  * SPDX License: MIT
  *
  *** This is a work in progress and may contain bugs! Patches welcome. ***
  * Available from https://github.com/phroggster/AutoSplits/
  */
- 
-/*
- * Game states / scenes:
- *    0x00 Teito Logo,  0x03 Difficulty Select, 0x04 GamePlay, 0x05 Character Select,
- *    0x06 You're Dead, 0x08 Attract,           0x09 !!GG!!,   0x0B Sound Test
- *    Other values may be seen briefly during boot.
- */
-
 state("snes9x") {}
 state("snes9x-x64") {}
 state("bsnes") {}
@@ -22,9 +14,12 @@ state("higan") {}
 state("emuhawk") {}
 
 startup {
+	const bool defaultDebug = true;
 	refreshRate = 0.50f;
 
-	vars.defaultDebug = false;
+	settings.Add("startCharsel", true, "Start: Character Select");
+	settings.Add("startWindow", false, "Start: Window Smash *TODO*");
+	settings.Add("startIGT", false, "Start: First in-game timer tick");
 
 	settings.Add("boss", true, "Split: Boss Death");
 	settings.CurrentDefaultParent = "boss";
@@ -38,40 +33,42 @@ startup {
 	settings.Add("boss8", true, "Stage 8: Banglar");
 	settings.CurrentDefaultParent = null;
 
-	settings.Add("deathReset", false, "Reset: Death");
-	settings.SetToolTip("deathReset", "When resets are enabled, checking this box will automatically reset the timer if the player dies. Unchecking this will allow for using continues.");
+	settings.Add("rstDeclineCC", true, "Reset: Decline continue");
+	settings.SetToolTip("rstDeclineCC", "Reset upon selecting 'No' on the prompt to continue.");
+	settings.Add("rstDeath", false, "Reset: Death");
+	settings.SetToolTip("rstDeath", "Reset as soon as the player dies. Prevents the use of continues.");
+	settings.Add("rstReboot", true, "Reset: Emulator boot");
+	settings.SetToolTip("rstReboot", "Reset if the game is restarted.");
 
-	settings.Add("debugging", vars.defaultDebug, "Enable Debugging");
+	settings.Add("debugging", defaultDebug, "Enable Debugging");
 	settings.SetToolTip("debugging", "Enable debugging via DebugView.");
 
 	settings.Add("infosection", false, "---Info---");
 	settings.CurrentDefaultParent = "infosection";
-	settings.Add("infosection0", false, "Supported emulators: BizHawk v2.3, bsnes 107-112, bsnes-plus 5, Higan 106, Snes9x v1.60, Snes9x-rr v1.51 & v1.60");
+	settings.Add("infosection0", false, "Supported emulators: BizHawk v2.3, bsnes 107-112, Higan 106 & 106.12, Snes9x v1.60, Snes9x-rr v1.60");
 	settings.Add("infosection1", false, "Website: https://github.com/phroggster/AutoSplits/");
 	settings.CurrentDefaultParent = null;
 
-	if (vars.defaultDebug) print("Ninja Warriors ASL [startup]: LiveSplit autosplit script is starting up.");
+	if (defaultDebug) print("TNWASL [startup]: LiveSplit AutoSplit script for The Ninja Warriors is starting up.");
 }
 
 shutdown {
-	refreshRate = 66.0f; // reset to the default as set in LiveSplit source code
-	if ((vars as System.Collections.Generic.IDictionary<string,object>).ContainsKey("watchers") && vars.watchers != null)
-	{
-		vars.watchers.ResetAll(); vars.watchers.Clear(); vars.Remove("watchers");
-	}
-	if (settings["debugging"]) print("Ninja Warriors ASL [shutdown]: LiveSplit autosplit script is shutting down.");
+	refreshRate = 0.5d;
+	if (settings["debugging"]) print("TNWASL [shutdown]: AutoSplit script is shutting down. Have a nice day!");
+}
+
+exit {
+	refreshRate = 0.5d;
+	if (settings["debugging"]) print("TNWASL [exit]: Emulator appears to have been closed. Cleaning up.");
 }
 
 init {
-	refreshRate = 0.50f;
+	refreshRate = 0.50d;
 
 	if (settings["debugging"]) {
-		print("Ninja Warriors ASL [init]: Initializing Ninja Warriors AutoSplitter!");
-		if (modules != null && modules.First() != null) {
-			print("Ninja Warriors ASL [init]: Module name is " + modules.First().ToString() + " and memory size is " + modules.First().ModuleMemorySize.ToString());
-		} else {
-			print("Ninja Warriors ASL [init]: Module is null, can't get size. Is the ROM loaded?");
-		}
+		print("TNWASL [init]: AutoSplit script is initializing. Module name is " +
+			modules.First().ToString() + " (" + game.ProcessName + ") and memory size is " +
+			modules.First().ModuleMemorySize.ToString());
 	}
 
 	var states = new Dictionary<int, long> {
@@ -90,14 +87,13 @@ init {
 		{   7061504, 0x36F11500240 },   // BizHawk 2.3
 		{   7249920, 0x36F11500240 },   // BizHawk 2.3.1
 		{   6938624, 0x36F11500240 },   // BizHawk 2.3.2
-
-		{   9908224,      0x7940FC },   // Snes9x-rr 1.51
-		{   9662464,      0x67DAC8 },   // bsnes-plus v05
 	};
 
 	long memoryOffset = 0;
-	if (states.TryGetValue(modules.First().ModuleMemorySize, out memoryOffset)) {
-		memoryOffset = memory.ReadValue<int>((IntPtr)memoryOffset);
+	if (states.TryGetValue(modules.First().ModuleMemorySize, out memoryOffset) && memoryOffset != 0) {
+		if (game.ProcessName.ToLower().Contains("snes9x")) {
+			memoryOffset = memory.ReadValue<int>((IntPtr)memoryOffset);
+		}
 	}
 
 	if (memoryOffset == 0) {
@@ -105,24 +101,16 @@ init {
 	}
 
 	vars.watchers = new MemoryWatcherList {
-		new MemoryWatcher<short>((IntPtr)memoryOffset + 0x0000) { Name = "gameState" },
-		new MemoryWatcher<short>((IntPtr)memoryOffset + 0x0002) { Name = "sceneDatA" },
-		new MemoryWatcher<short>((IntPtr)memoryOffset + 0x0004) { Name = "sceneDatB" },
-		new MemoryWatcher<byte> ((IntPtr)memoryOffset + 0x0278) { Name = "bgmTrack" },
-		new MemoryWatcher<short>((IntPtr)memoryOffset + 0x18A2) { Name = "enemy0HP" },
-		new MemoryWatcher<short>((IntPtr)memoryOffset + 0x18A6) { Name = "enemy1HP" },
-		new MemoryWatcher<short>((IntPtr)memoryOffset + 0x18B2) { Name = "playerHP" },
+		new MemoryWatcher<short>((IntPtr)memoryOffset + 0x0000) { Name = "gsa" },
+		new MemoryWatcher<short>((IntPtr)memoryOffset + 0x0002) { Name = "gsb" },
+		new MemoryWatcher<short>((IntPtr)memoryOffset + 0x01AE) { Name = "tsf" },
+		new MemoryWatcher<byte> ((IntPtr)memoryOffset + 0x0278) { Name = "bgm" },
+		new MemoryWatcher<short>((IntPtr)memoryOffset + 0x18A2) { Name = "hp0" },
+		new MemoryWatcher<short>((IntPtr)memoryOffset + 0x18A6) { Name = "hp1" },
+		new MemoryWatcher<short>((IntPtr)memoryOffset + 0x18B2) { Name = "php" },
 	};
 
-	if (settings["debugging"]) {
-		print("Ninja Warriors ASL [init]: LiveSplit autosplit script has been initialized. WRAM appears to be at " + string.Format("{0:x}", memoryOffset));
-	}
-}
-
-exit {
-	refreshRate = 66.0f; // Reset to the default as set in LiveSplit source code
-	if ((vars as System.Collections.Generic.IDictionary<string,object>).ContainsKey("watchers") && vars.watchers != null) { vars.watchers.ResetAll(); vars.watchers.Clear(); vars.Remove("watchers"); }
-	if (settings["debugging"]) print("Ninja Warriors ASL [exit]: emulator appears to have been closed. Cleaning up.");
+	if (settings["debugging"]) print("TNWASL [init]: AutoSplit script has been initialized. WRAM appears to be at " + string.Format("0x{0:X}.", memoryOffset));
 }
 
 update {
@@ -132,81 +120,77 @@ update {
 }
 
 start {
-	var gme = vars.watchers["gameState"];
-	if (gme.Current == 5) {
-		if (gme.Changed && gme.Old == 3 && refreshRate < 60) {
-			refreshRate = 100;
-			if (settings["debugging"]) print("Ninja Warriors ASL [start]: Ready to start, increasing refreshRate to " + refreshRate.ToString() + " fps.");
+	var gsa = vars.watchers["gsa"];
+	var gsb = vars.watchers["gsb"];
+	var tsf = vars.watchers["tsf"];
+
+	if (gsa.Changed) {
+		if (gsa.Current == 5 && refreshRate < 60.0d) {
+			refreshRate = 1000/15.0d;
+			if (settings["debugging"]) print("TNWASL [start]: Ready to start, increasing refreshRate.");
+		} else if (gsa.Current != 4 && gsa.Old == 5) {
+			refreshRate = 0.50d;
+			if (settings["debugging"]) print("TNWASL [start]: Game state reset, backing down the refreshRate.");
 		}
-		if (vars.watchers["sceneDatA"].Changed && vars.watchers["sceneDatA"].Current == 2) {
-			if (settings["debugging"]) print("Ninja Warriors ASL [start]: Go baby, go!");
-			return true;
-		}
+	}
+
+	var charSel = gsa.Current == 5 && settings["startCharsel"] && gsb.Changed && gsb.Current == 2;
+	var wndwBrk = gsa.Current == 4 && settings["startWindow"] && false;
+	var igtTick = gsa.Current == 4 && settings["startIGT"] && tsf.Old == 1 && tsf.Current == 2;
+
+	if (charSel || wndwBrk || igtTick) {
+		if (settings["debugging"]) print("TNWASL [start]: Go baby, go!");
+		return true;
 	}
 	return false;
 }
 
 reset {
-	var gme = vars.watchers["gameState"];
+	var gsa = vars.watchers["gsa"];
+	var gsb = vars.watchers["gsb"];
+	var php = vars.watchers["php"];
 
-	// Current HP goes to -64 when changing levels to mark a pending refill.
-	var playerDead = settings["deathReset"]
-	              && gme.Current == 4 && !gme.Changed
-	              && vars.watchers["playerHP"].Old > 0
-	              && vars.watchers["playerHP"].Current <= 0
-	              && vars.watchers["playerHP"].Current != -64;
+	var emuReset = settings["rstReboot"] && gsa.Changed && gsa.Current == 0;
+	// Current HP goes to -64 when changing levels to mark a refill anim.
+	var playerDead = settings["rstDeath"] && !gsa.Changed && gsa.Current == 4
+			&& php.Old > 0 && php.Current <= 0 && php.Current != -64;
+	var declineCC = settings["rstDeclineCC"] && gsa.Current == 6 && gsb.Old == 1 && gsb.Current == 3;
 
-	var hostReset = gme.Changed && gme.Old == 4
-	             && gme.Current != 3 && gme.Current != 4 && gme.Current != 6;
-
-	if (settings["debugging"]) {
-		if (playerDead){
-			print("Ninja Warriors ASL [reset]: player appears to have died; HP transitioned from " + vars.watchers["playerHP"].Old.ToString() + " to " + vars.watchers["playerHP"].Current.ToString());
-		}
-		if (hostReset) {
-			print("Ninja Warriors ASL [reset]: emulator appears to have reset. GameMode transitioned from " + gme.Old.ToString() + " to " + gme.Current.ToString());
-		}
+	if (emuReset || playerDead || declineCC) {;
+		if (settings["debugging"]) print("TNWASL [reset]: " +
+			(emuReset ? "Emulator reset" : (playerDead ? "Player died." : (declineCC ? "Continue declined." : "(unknown)."))));
+		refreshRate = 0.50f;
+		return true;
 	}
-
-	if (playerDead || hostReset) {
-		if (refreshRate > 0.50f) {
-			refreshRate = 0.50f;
-			if (settings["debugging"]) print("Ninja Warriors ASL [reset]: game reset, lowering refreshRate to " + refreshRate.ToString() + " fps.");
-			return true;
-		}
-	}
-	return (playerDead || hostReset);
+	return false;
 }
 
 split {
 	// Phobos and Deimos use enemy slots 1 and 3, every other boss uses enemy slot 0
-	var enemy0Died = (vars.watchers["enemy0HP"].Changed && vars.watchers["enemy0HP"].Current <= 0 && vars.watchers["enemy0HP"].Old > 0);
-	var enemy1Died = (vars.watchers["enemy1HP"].Changed && vars.watchers["enemy1HP"].Current <= 0 && vars.watchers["enemy1HP"].Old > 0);
-	var bgm = vars.watchers["bgmTrack"].Current;
+	var e0dead = (vars.watchers["hp0"].Changed && vars.watchers["hp0"].Current <= 0 && vars.watchers["hp0"].Old > 0);
+	var e1dead = (vars.watchers["hp1"].Changed && vars.watchers["hp1"].Current <= 0 && vars.watchers["hp1"].Old > 0);
+	var bgm = vars.watchers["bgm"].Current;
 
-	var giga = enemy0Died && settings["boss1"] && bgm == 0x11;
-	var bull = enemy0Died && settings["boss2"] && bgm == 0x14;
-	var yamo = enemy0Died && settings["boss3"] && bgm == 0x1B;
-	var silv = enemy0Died && settings["boss4"] && bgm == 0x1D;
-	var jube = enemy0Died && settings["boss5"] && bgm == 0x1E;
-	var twin = enemy1Died && settings["boss6"] && bgm == 0x1F;
-	var zelo = enemy0Died && settings["boss7"] && bgm == 0x20;
-	var bang = enemy0Died && settings["boss8"] && bgm == 0x21;
+	var giga = e0dead && settings["boss1"] && bgm == 0x11;
+	var bull = e0dead && settings["boss2"] && bgm == 0x14;
+	var yamo = e0dead && settings["boss3"] && bgm == 0x1B;
+	var silv = e0dead && settings["boss4"] && bgm == 0x1D;
+	var jube = e0dead && settings["boss5"] && bgm == 0x1E;
+	var twin = e1dead && settings["boss6"] && bgm == 0x1F;
+	var zelo = e0dead && settings["boss7"] && bgm == 0x20;
+	var bang = e0dead && settings["boss8"] && bgm == 0x21;
 
 	if (settings["debugging"]) {
-		if (giga) print("Ninja Warriors ASL [split]: Boss Gigant has died!");
-		if (bull) print("Ninja Warriors ASL [split]: Boss Chainsaw Bull has died!");
-		if (yamo) print("Ninja Warriors ASL [split]: Boss Yamori has died!");
-		if (silv) print("Ninja Warriors ASL [split]: Boss Silverman has died!");
-		if (jube) print("Ninja Warriors ASL [split]: Boss Jubei has died!");
-		if (twin) print("Ninja Warriors ASL [split]: Bosses Phobos & Deimos have died!");
-		if (zelo) print("Ninja Warriors ASL [split]: Boss Zelos has died!");
-		if (bang) print("Ninja Warriors ASL [split]: Boss Banglar has died!");
+		if (giga) print("TNWASL [split]: Boss Gigant has died!");
+		if (bull) print("TNWASL [split]: Boss Chainsaw Bull has died!");
+		if (yamo) print("TNWASL [split]: Boss Yamori has died!");
+		if (silv) print("TNWASL [split]: Boss Silverman has died!");
+		if (jube) print("TNWASL [split]: Boss Jubei has died!");
+		if (twin) print("TNWASL [split]: Bosses Phobos & Deimos have died!");
+		if (zelo) print("TNWASL [split]: Boss Zelos has died!");
+		if (bang) print("TNWASL [split]: Boss Banglar has died! Reducing refreshRate.");
 	}
 
-	if (bang && refreshRate > 0.50f) {
-		refreshRate = 0.50f;
-		if (settings["debugging"]) print("Ninja Warriors ASL [split]: reducing refreshRate to " + refreshRate.ToString() + " fps.");
-	}
+	if (bang) refreshRate = 0.50f;
 	return (giga || bull || yamo || silv || jube || twin || zelo || bang);
 }
