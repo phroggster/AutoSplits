@@ -15,7 +15,7 @@ state("emuhawk") {}
 
 startup {
 	const bool defaultDebug = false;
-	refreshRate = 0.50f;
+	refreshRate = 0.50d;
 
 	settings.Add("startCharsel", true, "Start: Character Select");
 	settings.Add("startIGT", false, "Start: First in-game timer tick");
@@ -74,7 +74,7 @@ init {
 		{   9646080,      0x97EE04 },   // Snes9x-rr 1.60
 		{  13565952,   0x140925118 },   // Snes9x-rr 1.60 (x64)
 		{   9027584,      0x94DB54 },   // Snes9x 1.60
-		{  12836864,   0x1408D8bE8 },   // Snes9x 1.60 (x64)
+		{  12836864,   0x1408D8BE8 },   // Snes9x 1.60 (x64)
 		{  16019456,      0x94D144 },   // higan v106
 		{  15360000,      0x8AB144 },   // higan v106.112
 		{  10096640,      0x72BECC },   // bsnes v107
@@ -96,7 +96,7 @@ init {
 	}
 
 	if (memoryOffset == 0) {
-		throw new Exception("Can't read WRAM offset. ROM is probably not loaded or something.");
+		throw new Exception("Can't read WRAM offset. ROM is probably not loaded, or an unsupported emulator is being used.");
 	}
 
 	vars.watchers = new MemoryWatcherList {
@@ -157,7 +157,7 @@ reset {
 	if (emuReset || playerDead || declineCC) {;
 		if (settings["debugging"]) print("TNWASL [reset]: " +
 			(emuReset ? "Emulator reset" : (playerDead ? "Player died." : (declineCC ? "Continue declined." : "(unknown)."))));
-		refreshRate = 0.50f;
+		refreshRate = 0.50d;
 		return true;
 	}
 	return false;
@@ -189,6 +189,6 @@ split {
 		if (bang) print("TNWASL [split]: Boss Banglar has died! Reducing refreshRate.");
 	}
 
-	if (bang) refreshRate = 0.50f;
+	if (bang) refreshRate = 0.50d;
 	return (giga || bull || yamo || silv || jube || twin || zelo || bang);
 }
