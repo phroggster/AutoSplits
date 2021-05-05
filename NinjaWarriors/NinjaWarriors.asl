@@ -18,7 +18,6 @@ startup {
 	refreshRate = 0.50f;
 
 	settings.Add("startCharsel", true, "Start: Character Select");
-	settings.Add("startWindow", false, "Start: Window Smash *TODO*");
 	settings.Add("startIGT", false, "Start: First in-game timer tick");
 
 	settings.Add("boss", true, "Split: Boss Death");
@@ -45,7 +44,7 @@ startup {
 
 	settings.Add("infosection", false, "---Info---");
 	settings.CurrentDefaultParent = "infosection";
-	settings.Add("infosection0", false, "Supported emulators: BizHawk v2.3, bsnes 107-112, Higan 106 & 106.12, Snes9x v1.60, Snes9x-rr v1.60");
+	settings.Add("infosection0", false, "Supported emulators: BizHawk v2.3, bsnes 107-112, Higan 106 & 106.12, Snes9x v1.60, and Snes9x-rr v1.60");
 	settings.Add("infosection1", false, "Website: https://github.com/phroggster/AutoSplits/");
 	settings.CurrentDefaultParent = null;
 
@@ -135,10 +134,9 @@ start {
 	}
 
 	var charSel = gsa.Current == 5 && settings["startCharsel"] && gsb.Changed && gsb.Current == 2;
-	var wndwBrk = gsa.Current == 4 && settings["startWindow"] && false;
 	var igtTick = gsa.Current == 4 && settings["startIGT"] && tsf.Old == 1 && tsf.Current == 2;
 
-	if (charSel || wndwBrk || igtTick) {
+	if (charSel || igtTick) {
 		if (settings["debugging"]) print("TNWASL [start]: Go baby, go!");
 		return true;
 	}
