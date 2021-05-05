@@ -14,7 +14,7 @@ state("higan") {}
 state("emuhawk") {}
 
 startup {
-	const bool defaultDebug = true;
+	const bool defaultDebug = false;
 	refreshRate = 0.50f;
 
 	settings.Add("startCharsel", true, "Start: Character Select");
