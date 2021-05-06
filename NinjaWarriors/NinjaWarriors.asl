@@ -44,7 +44,7 @@ startup {
 
 	settings.Add("infosection", false, "---Info---");
 	settings.CurrentDefaultParent = "infosection";
-	settings.Add("infosection0", false, "Supported emulators: BizHawk v2.3, bsnes 107-112, Higan 106 & 106.12, Snes9x v1.60, and Snes9x-rr v1.60");
+	settings.Add("infosection0", false, "Supported emulators: BizHawk (bsnes core) 2.3-2.3.2, 2.6-2.6.1; bsnes 107-107.3, 110-112, 115; Snes9x 1.60; Snes9x-rr 1.60");
 	settings.Add("infosection1", false, "Website: https://github.com/phroggster/AutoSplits/");
 	settings.CurrentDefaultParent = null;
 
@@ -71,21 +71,23 @@ init {
 	}
 
 	var states = new Dictionary<int, long> {
-		{   9646080,      0x97EE04 },   // Snes9x-rr 1.60
-		{  13565952,   0x140925118 },   // Snes9x-rr 1.60 (x64)
-		{   9027584,      0x94DB54 },   // Snes9x 1.60
-		{  12836864,   0x1408D8BE8 },   // Snes9x 1.60 (x64)
-		{  16019456,      0x94D144 },   // higan v106
-		{  15360000,      0x8AB144 },   // higan v106.112
-		{  10096640,      0x72BECC },   // bsnes v107
-		{  10338304,      0x762F2C },   // bsnes v107.1
-		{  47230976,      0x765F2C },   // bsnes v107.2/107.3
-		{ 131543040,      0xA9BD5C },   // bsnes v110
-		{  51924992,      0xA9DD5C },   // bsnes v111
-		{  52056064,      0xAAED7C },   // bsnes v112
-		{   7061504, 0x36F11500240 },   // BizHawk 2.3
-		{   7249920, 0x36F11500240 },   // BizHawk 2.3.1
-		{   6938624, 0x36F11500240 },   // BizHawk 2.3.2
+		{   9646080,      0x97EE04 }, // Snes9x-rr 1.60
+		{  13565952,   0x140925118 }, // Snes9x-rr 1.60 (x64)
+		{   9027584,      0x94DB54 }, // Snes9x 1.60
+		{  12836864,   0x1408D8BE8 }, // Snes9x 1.60 (x64)
+		{  10096640,      0x72BECC }, // bsnes v107
+		{  10338304,      0x762F2C }, // bsnes v107.1
+		{  47230976,      0x765F2C }, // bsnes v107.2, 107.3
+		{ 131543040,      0xA9BD5C }, // bsnes v110
+		{  51924992,      0xA9DD5C }, // bsnes v111
+		{  52056064,      0xAAED7C }, // bsnes v112
+		//{  52477952,      0xB15D7C }, // bsnes v113.1, 114
+		{  52477952,      0xB16D7C }, // bsnes v115
+		{   7061504, 0x36F11500240 }, // BizHawk 2.3
+		{   7249920, 0x36F11500240 }, // BizHawk 2.3.1
+		{   6938624, 0x36F11500240 }, // BizHawk 2.3.2
+		{   4538368, 0x36F05F94040 }, // BizHawk 2.6.0
+		{   4546560, 0x36F05F94040 }, // BizHawk 2.6.1
 	};
 
 	long memoryOffset = 0;
